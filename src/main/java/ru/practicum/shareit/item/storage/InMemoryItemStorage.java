@@ -54,8 +54,8 @@ public class InMemoryItemStorage implements ItemStorage {
         String query = text.toLowerCase();
         return items.values().stream()
                 .filter(item -> Boolean.TRUE.equals(item.getAvailable()))
-                .filter(item -> (item.getName() != null && item.getName().toLowerCase().contains(query))
-                        || (item.getDescription() != null && item.getDescription().toLowerCase().contains(query)))
+                .filter(item -> item.getName().toLowerCase().contains(query)
+                        || item.getDescription().toLowerCase().contains(query))
                 .collect(Collectors.toList());
     }
 

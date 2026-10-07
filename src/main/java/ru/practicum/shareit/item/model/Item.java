@@ -18,8 +18,4 @@ public class Item {
     private Boolean available;
     private User owner;
     private ItemRequest request;
-
-    public Boolean isAvailable() {
-        return available;
-    }
 }

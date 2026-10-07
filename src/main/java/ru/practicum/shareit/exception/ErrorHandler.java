@@ -26,24 +26,14 @@ public class ErrorHandler {
         return new ErrorResponse(e.getMessage());
     }
 
-    @ExceptionHandler
+    @ExceptionHandler({
+            ValidationException.class,
+            MethodArgumentNotValidException.class,
+            MissingRequestHeaderException.class
+    })
     @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public ErrorResponse handleValidationException(final ValidationException e) {
-        log.warn("400 Bad Request (Validation): {}", e.getMessage());
-        return new ErrorResponse(e.getMessage());
-    }
-
-    @ExceptionHandler
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public ErrorResponse handleMethodArgumentNotValidException(final MethodArgumentNotValidException e) {
-        log.warn("400 Bad Request (MethodArgumentNotValid): {}", e.getMessage());
-        return new ErrorResponse(e.getMessage());
-    }
-
-    @ExceptionHandler
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public ErrorResponse handleMissingRequestHeaderException(final MissingRequestHeaderException e) {
-        log.warn("400 Bad Request (Missing Header): {}", e.getMessage());
+    public ErrorResponse handleBadRequest(final Exception e) {
+        log.warn("400 Bad Request: {}", e.getMessage());
         return new ErrorResponse(e.getMessage());
     }
 
