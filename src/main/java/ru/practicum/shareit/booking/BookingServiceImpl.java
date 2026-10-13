@@ -2,10 +2,12 @@ package ru.practicum.shareit.booking;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.shareit.booking.dto.BookingDto;
 import ru.practicum.shareit.booking.dto.BookingInputDto;
+import ru.practicum.shareit.exception.ItemOwnerBookingException;
 import ru.practicum.shareit.exception.NotFoundException;
 import ru.practicum.shareit.exception.ValidationException;
 import ru.practicum.shareit.item.ItemRepository;
@@ -23,6 +25,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class BookingServiceImpl implements BookingService {
 
+    private static final Sort SORT_BY_START_DESC = Sort.by(Sort.Direction.DESC, "start");
+
     private final BookingRepository bookingRepository;
     private final UserRepository userRepository;
     private final ItemRepository itemRepository;
@@ -37,7 +41,7 @@ public class BookingServiceImpl implements BookingService {
                 .orElseThrow(() -> new NotFoundException("Вещь с id " + inputDto.getItemId() + " не найдена"));
 
         if (item.getOwner() != null && item.getOwner().getId().equals(userId)) {
-            throw new NotFoundException("Владелец не может забронировать собственную вещь");
+            throw new ItemOwnerBookingException("Владелец не может забронировать собственную вещь");
         }
 
         if (!Boolean.TRUE.equals(item.getAvailable())) {
@@ -113,29 +117,18 @@ public class BookingServiceImpl implements BookingService {
 
         BookingState state = BookingState.from(stateStr);
         LocalDateTime now = LocalDateTime.now();
-        List<Booking> bookings;
 
-        switch (state) {
-            case CURRENT:
-                bookings = bookingRepository.findByBookerIdAndStartBeforeAndEndAfterOrderByStartDesc(userId, now, now);
-                break;
-            case PAST:
-                bookings = bookingRepository.findByBookerIdAndEndBeforeOrderByStartDesc(userId, now);
-                break;
-            case FUTURE:
-                bookings = bookingRepository.findByBookerIdAndStartAfterOrderByStartDesc(userId, now);
-                break;
-            case WAITING:
-                bookings = bookingRepository.findByBookerIdAndStatusOrderByStartDesc(userId, BookingStatus.WAITING);
-                break;
-            case REJECTED:
-                bookings = bookingRepository.findByBookerIdAndStatusOrderByStartDesc(userId, BookingStatus.REJECTED);
-                break;
-            case ALL:
-            default:
-                bookings = bookingRepository.findByBookerIdOrderByStartDesc(userId);
-                break;
-        }
+        List<Booking> bookings = switch (state) {
+            case CURRENT -> bookingRepository.findByBookerIdAndStartBeforeAndEndAfter(
+                    userId, now, now, SORT_BY_START_DESC);
+            case PAST -> bookingRepository.findByBookerIdAndEndBefore(userId, now, SORT_BY_START_DESC);
+            case FUTURE -> bookingRepository.findByBookerIdAndStartAfter(userId, now, SORT_BY_START_DESC);
+            case WAITING -> bookingRepository.findByBookerIdAndStatus(
+                    userId, BookingStatus.WAITING, SORT_BY_START_DESC);
+            case REJECTED -> bookingRepository.findByBookerIdAndStatus(
+                    userId, BookingStatus.REJECTED, SORT_BY_START_DESC);
+            case ALL -> bookingRepository.findByBookerId(userId, SORT_BY_START_DESC);
+        };
 
         return bookings.stream()
                 .map(BookingMapper::toBookingDto)
@@ -155,32 +148,18 @@ public class BookingServiceImpl implements BookingService {
 
         BookingState state = BookingState.from(stateStr);
         LocalDateTime now = LocalDateTime.now();
-        List<Booking> bookings;
 
-        switch (state) {
-            case CURRENT:
-                bookings = bookingRepository.findByItemOwnerIdAndStartBeforeAndEndAfterOrderByStartDesc(
-                        userId, now, now);
-                break;
-            case PAST:
-                bookings = bookingRepository.findByItemOwnerIdAndEndBeforeOrderByStartDesc(userId, now);
-                break;
-            case FUTURE:
-                bookings = bookingRepository.findByItemOwnerIdAndStartAfterOrderByStartDesc(userId, now);
-                break;
-            case WAITING:
-                bookings = bookingRepository.findByItemOwnerIdAndStatusOrderByStartDesc(
-                        userId, BookingStatus.WAITING);
-                break;
-            case REJECTED:
-                bookings = bookingRepository.findByItemOwnerIdAndStatusOrderByStartDesc(
-                        userId, BookingStatus.REJECTED);
-                break;
-            case ALL:
-            default:
-                bookings = bookingRepository.findByItemOwnerIdOrderByStartDesc(userId);
-                break;
-        }
+        List<Booking> bookings = switch (state) {
+            case CURRENT -> bookingRepository.findByItemOwnerIdAndStartBeforeAndEndAfter(
+                    userId, now, now, SORT_BY_START_DESC);
+            case PAST -> bookingRepository.findByItemOwnerIdAndEndBefore(userId, now, SORT_BY_START_DESC);
+            case FUTURE -> bookingRepository.findByItemOwnerIdAndStartAfter(userId, now, SORT_BY_START_DESC);
+            case WAITING -> bookingRepository.findByItemOwnerIdAndStatus(
+                    userId, BookingStatus.WAITING, SORT_BY_START_DESC);
+            case REJECTED -> bookingRepository.findByItemOwnerIdAndStatus(
+                    userId, BookingStatus.REJECTED, SORT_BY_START_DESC);
+            case ALL -> bookingRepository.findByItemOwnerId(userId, SORT_BY_START_DESC);
+        };
 
         return bookings.stream()
                 .map(BookingMapper::toBookingDto)
@@ -188,14 +167,8 @@ public class BookingServiceImpl implements BookingService {
     }
 
     private void validateBookingDates(LocalDateTime start, LocalDateTime end) {
-        if (start == null || end == null) {
-            throw new ValidationException("Даты бронирования не могут быть пустыми");
-        }
         if (start.isAfter(end) || start.isEqual(end)) {
             throw new ValidationException("Дата начала не может быть позже или равна дате окончания");
-        }
-        if (start.isBefore(LocalDateTime.now())) {
-            throw new ValidationException("Дата начала бронирования не может быть в прошлом");
         }
     }
 }
