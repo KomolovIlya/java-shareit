@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import ru.practicum.shareit.item.dto.CommentDto;
 import ru.practicum.shareit.item.dto.ItemDto;
 
 import java.util.List;
@@ -45,7 +46,7 @@ public class ItemController {
     public ItemDto getById(@RequestHeader(value = USER_ID_HEADER, required = false) Long userId,
                            @PathVariable Long itemId) {
         log.info("GET /items/{}, userId: {}", itemId, userId);
-        return itemService.getById(itemId);
+        return itemService.getById(itemId, userId);
     }
 
     @GetMapping
@@ -58,5 +59,13 @@ public class ItemController {
     public List<ItemDto> search(@RequestParam String text) {
         log.info("GET /items/search?text={}", text);
         return itemService.search(text);
+    }
+
+    @PostMapping("/{itemId}/comment")
+    public CommentDto addComment(@RequestHeader(USER_ID_HEADER) Long userId,
+                                 @PathVariable Long itemId,
+                                 @Valid @RequestBody CommentDto commentDto) {
+        log.info("POST /items/{}/comment, userId: {}, body: {}", itemId, userId, commentDto);
+        return itemService.addComment(userId, itemId, commentDto);
     }
 }
