@@ -6,6 +6,10 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import ru.practicum.shareit.booking.dto.BookingShortDto;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Data
 @Builder
@@ -24,4 +28,11 @@ public class ItemDto {
     private Boolean available;
 
     private Long requestId;
+
+    private BookingShortDto lastBooking;
+
+    private BookingShortDto nextBooking;
+
+    @Builder.Default
+    private List<CommentDto> comments = new ArrayList<>();
 }
