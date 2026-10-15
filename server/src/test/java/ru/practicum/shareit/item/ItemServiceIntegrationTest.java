@@ -4,13 +4,20 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
+import ru.practicum.shareit.exception.NotFoundException;
+import ru.practicum.shareit.exception.ValidationException;
+import ru.practicum.shareit.item.dto.CommentDto;
 import ru.practicum.shareit.item.dto.ItemDto;
 import ru.practicum.shareit.user.UserService;
 import ru.practicum.shareit.user.dto.UserDto;
 
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SpringBootTest
 @Transactional
@@ -23,62 +30,43 @@ class ItemServiceIntegrationTest {
     private UserService userService;
 
     @Test
-    void createAndGetItemTest() {
-        UserDto owner = userService.create(UserDto.builder()
-                .name("Владелец")
-                .email("owner@item.com")
-                .build());
+    void testCreateUpdateAndSearchItem() {
+        UserDto user = userService.create(UserDto.builder().name("ItemOwner").email("item_owner@mail.com").build());
+        UserDto stranger = userService.create(UserDto.builder().name("Stranger").email("stranger@mail.com").build());
 
         ItemDto itemDto = ItemDto.builder()
-                .name("Перфоратор")
-                .description("Мощный перфоратор")
+                .name("Шуруповерт")
+                .description("Аккумуляторный")
                 .available(true)
                 .build();
-
-        ItemDto created = itemService.create(owner.getId(), itemDto);
+        ItemDto created = itemService.create(user.getId(), itemDto);
         assertNotNull(created.getId());
-        assertEquals("Перфоратор", created.getName());
 
-        ItemDto found = itemService.getById(created.getId(), owner.getId());
-        assertEquals("Перфоратор", found.getName());
-        assertTrue(found.getAvailable());
-    }
+        ItemDto updateDto = ItemDto.builder()
+                .name("Шуруповерт Pro")
+                .description("Аккумуляторный мощный")
+                .available(false)
+                .build();
+        ItemDto updated = itemService.update(user.getId(), created.getId(), updateDto);
+        assertEquals("Шуруповерт Pro", updated.getName());
+        assertEquals("Аккумуляторный мощный", updated.getDescription());
+        assertFalse(updated.getAvailable());
 
-    @Test
-    void getByOwnerIdTest() {
-        UserDto owner = userService.create(UserDto.builder()
-                .name("Владелец 2")
-                .email("owner2@item.com")
-                .build());
+        assertThrows(NotFoundException.class, () -> itemService.update(stranger.getId(), created.getId(), updateDto));
 
-        ItemDto item1 = ItemDto.builder().name("Пила").description("Дисковая").available(true).build();
-        ItemDto item2 = ItemDto.builder().name("Лобзик").description("Электрический").available(true).build();
+        itemService.update(user.getId(), created.getId(), ItemDto.builder().available(true).build());
+        List<ItemDto> searchResults = itemService.search("мощный");
+        assertEquals(1, searchResults.size());
 
-        itemService.create(owner.getId(), item1);
-        itemService.create(owner.getId(), item2);
+        List<ItemDto> emptySearch = itemService.search("");
+        assertTrue(emptySearch.isEmpty());
+        List<ItemDto> nullSearch = itemService.search(null);
+        assertTrue(nullSearch.isEmpty());
 
-        List<ItemDto> items = itemService.getByOwnerId(owner.getId());
-        assertEquals(2, items.size());
-    }
+        ItemDto fetched = itemService.getById(created.getId(), stranger.getId());
+        assertEquals("Шуруповерт Pro", fetched.getName());
 
-    @Test
-    void searchItemsTest() {
-        UserDto owner = userService.create(UserDto.builder()
-                .name("Владелец 3")
-                .email("owner3@item.com")
-                .build());
-
-        ItemDto item1 = ItemDto.builder().name("Шуруповерт Bosch").description("Аккумуляторный").available(true).build();
-        ItemDto item2 = ItemDto.builder().name("Шуруповерт Makita").description("Сетевой").available(false).build();
-
-        itemService.create(owner.getId(), item1);
-        itemService.create(owner.getId(), item2);
-
-        List<ItemDto> found = itemService.search("шуруповерт");
-        assertEquals(1, found.size());
-        assertEquals("Шуруповерт Bosch", found.get(0).getName());
-
-        List<ItemDto> empty = itemService.search("");
-        assertTrue(empty.isEmpty());
+        CommentDto commentDto = CommentDto.builder().text("Отзыв без аренды").build();
+        assertThrows(ValidationException.class, () -> itemService.addComment(stranger.getId(), created.getId(), commentDto));
     }
 }
