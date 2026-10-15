@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
+import ru.practicum.shareit.exception.NotFoundException;
 import ru.practicum.shareit.item.ItemService;
 import ru.practicum.shareit.item.dto.ItemDto;
 import ru.practicum.shareit.request.dto.ItemRequestDto;
@@ -12,7 +13,10 @@ import ru.practicum.shareit.user.dto.UserDto;
 
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @SpringBootTest
 @Transactional
@@ -28,43 +32,35 @@ class ItemRequestServiceIntegrationTest {
     private ItemService itemService;
 
     @Test
-    void createAndGetRequestsTest() {
-        UserDto requester = userService.create(UserDto.builder()
-                .name("Проситель")
-                .email("req@integration.com")
-                .build());
+    void testRequestLifecycle() {
+        UserDto requestor = userService.create(UserDto.builder().name("ReqUser").email("requser@mail.com").build());
+        UserDto responder = userService.create(UserDto.builder().name("RespUser").email("respuser@mail.com").build());
 
-        UserDto otherUser = userService.create(UserDto.builder()
-                .name("Другой")
-                .email("other@integration.com")
-                .build());
+        ItemRequestDto request = itemRequestService.create(requestor.getId(),
+                ItemRequestDto.builder().description("Нужна лестница").build());
+        assertNotNull(request.getId());
 
-        ItemRequestDto requestDto = ItemRequestDto.builder()
-                .description("Ищу сварочный аппарат")
-                .build();
-
-        ItemRequestDto created = itemRequestService.create(requester.getId(), requestDto);
-        assertNotNull(created.getId());
-        assertEquals("Ищу сварочный аппарат", created.getDescription());
-
-        // otherUser добавляет вещь в ответ на этот запрос
-        itemService.create(otherUser.getId(), ItemDto.builder()
-                .name("Сварочный аппарат Ресанта")
-                .description("Инверторный")
+        itemService.create(responder.getId(), ItemDto.builder()
+                .name("Лестница стремянка")
+                .description("3 метра")
                 .available(true)
-                .requestId(created.getId())
+                .requestId(request.getId())
                 .build());
 
-        List<ItemRequestDto> userRequests = itemRequestService.getUserRequests(requester.getId());
-        assertEquals(1, userRequests.size());
-        assertFalse(userRequests.get(0).getItems().isEmpty());
-        assertEquals("Сварочный аппарат Ресанта", userRequests.get(0).getItems().get(0).getName());
+        List<ItemRequestDto> ownRequests = itemRequestService.getUserRequests(requestor.getId());
+        assertEquals(1, ownRequests.size());
+        assertFalse(ownRequests.get(0).getItems().isEmpty());
 
-        List<ItemRequestDto> allRequests = itemRequestService.getAllRequests(otherUser.getId());
-        assertEquals(1, allRequests.size());
+        List<ItemRequestDto> otherRequests = itemRequestService.getAllRequests(responder.getId());
+        assertEquals(1, otherRequests.size());
 
-        ItemRequestDto byId = itemRequestService.getById(requester.getId(), created.getId());
-        assertEquals(created.getId(), byId.getId());
-        assertEquals(1, byId.getItems().size());
+        ItemRequestDto fetched = itemRequestService.getById(requestor.getId(), request.getId());
+        assertEquals(request.getId(), fetched.getId());
+        assertEquals(1, fetched.getItems().size());
+
+        assertThrows(NotFoundException.class, () -> itemRequestService.getById(requestor.getId(), 999L));
+        assertThrows(NotFoundException.class, () -> itemRequestService.create(999L, request));
+        assertThrows(NotFoundException.class, () -> itemRequestService.getUserRequests(999L));
+        assertThrows(NotFoundException.class, () -> itemRequestService.getAllRequests(999L));
     }
 }
