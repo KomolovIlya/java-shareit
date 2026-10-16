@@ -31,10 +31,10 @@ class ItemRequestDtoTest {
         JsonContent<ItemRequestDto> result = json.write(requestDto);
 
         assertThat(result).hasJsonPathNumberValue("$.id");
-        assertThat(result).extractingJsonPathNumberValue("$.id").isEqualTo(5);
-        assertThat(result).extractingJsonPathStringValue("$.description").isEqualTo("Ищу перфоратор");
+        assertThat(result).extractingJsonPathNumberValue("$.id").isEqualTo(requestDto.getId().intValue());
+        assertThat(result).extractingJsonPathStringValue("$.description").isEqualTo(requestDto.getDescription());
         assertThat(result).hasJsonPathStringValue("$.created");
-        assertThat(result).extractingJsonPathStringValue("$.created").startsWith("2026-11-15T14:30:00");
+        assertThat(result).extractingJsonPathStringValue("$.created").startsWith(requestDto.getCreated().toString());
         assertThat(result).hasJsonPathArrayValue("$.items");
         assertThat(result).extractingJsonPathArrayValue("$.items").isEmpty();
     }

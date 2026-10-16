@@ -30,10 +30,10 @@ class CommentDtoTest {
         JsonContent<CommentDto> result = json.write(commentDto);
 
         assertThat(result).hasJsonPathNumberValue("$.id");
-        assertThat(result).extractingJsonPathNumberValue("$.id").isEqualTo(7);
-        assertThat(result).extractingJsonPathStringValue("$.text").isEqualTo("Отличный инструмент, всё сработало!");
-        assertThat(result).extractingJsonPathStringValue("$.authorName").isEqualTo("Алексей");
+        assertThat(result).extractingJsonPathNumberValue("$.id").isEqualTo(commentDto.getId().intValue());
+        assertThat(result).extractingJsonPathStringValue("$.text").isEqualTo(commentDto.getText());
+        assertThat(result).extractingJsonPathStringValue("$.authorName").isEqualTo(commentDto.getAuthorName());
         assertThat(result).hasJsonPathStringValue("$.created");
-        assertThat(result).extractingJsonPathStringValue("$.created").startsWith("2026-10-20T18:45:00");
+        assertThat(result).extractingJsonPathStringValue("$.created").startsWith(commentDto.getCreated().toString());
     }
 }

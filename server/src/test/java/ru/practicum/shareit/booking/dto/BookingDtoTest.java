@@ -49,15 +49,20 @@ class BookingDtoTest {
         JsonContent<BookingDto> result = json.write(bookingDto);
 
         assertThat(result).hasJsonPathNumberValue("$.id");
-        assertThat(result).extractingJsonPathNumberValue("$.id").isEqualTo(10);
+        assertThat(result).extractingJsonPathNumberValue("$.id").isEqualTo(bookingDto.getId().intValue());
+
         assertThat(result).hasJsonPathStringValue("$.start");
-        assertThat(result).extractingJsonPathStringValue("$.start").startsWith("2026-12-01T10:00:00");
+        assertThat(result).extractingJsonPathStringValue("$.start").startsWith(bookingDto.getStart().toString());
+
         assertThat(result).hasJsonPathStringValue("$.end");
-        assertThat(result).extractingJsonPathStringValue("$.end").startsWith("2026-12-02T10:00:00");
-        assertThat(result).extractingJsonPathStringValue("$.status").isEqualTo("WAITING");
-        assertThat(result).extractingJsonPathNumberValue("$.booker.id").isEqualTo(1);
-        assertThat(result).extractingJsonPathStringValue("$.booker.name").isEqualTo("Booker");
-        assertThat(result).extractingJsonPathNumberValue("$.item.id").isEqualTo(2);
-        assertThat(result).extractingJsonPathStringValue("$.item.name").isEqualTo("Дрель");
+        assertThat(result).extractingJsonPathStringValue("$.end").startsWith(bookingDto.getEnd().toString());
+
+        assertThat(result).extractingJsonPathStringValue("$.status").isEqualTo(bookingDto.getStatus().name());
+
+        assertThat(result).extractingJsonPathNumberValue("$.booker.id").isEqualTo(bookingDto.getBooker().getId().intValue());
+        assertThat(result).extractingJsonPathStringValue("$.booker.name").isEqualTo(bookingDto.getBooker().getName());
+
+        assertThat(result).extractingJsonPathNumberValue("$.item.id").isEqualTo(bookingDto.getItem().getId().intValue());
+        assertThat(result).extractingJsonPathStringValue("$.item.name").isEqualTo(bookingDto.getItem().getName());
     }
 }
